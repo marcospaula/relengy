@@ -62,10 +62,10 @@ ActionPriority = Literal["H", "M", "L"]
 
 # MIL-STD-1629A, 4.4.3 — classificação de severidade (categorias, não 1-10).
 MIL_SEVERITY_CATEGORIES = {
-    "I": "Catastrófica — pode causar morte ou perda do sistema de armas",
-    "II": "Crítica — lesão severa, dano maior, resulta em perda de missão",
-    "III": "Marginal — lesão/dano menor, atraso ou degradação de missão",
-    "IV": "Menor — sem lesão ou dano; gera manutenção não programada",
+    "I": "Catastrophic - may cause death or loss of the weapon system",
+    "II": "Critical - severe injury, major damage, results in mission loss",
+    "III": "Marginal - minor injury or damage, mission delay or degradation",
+    "IV": "Minor - no injury or damage; causes unscheduled maintenance",
 }
 
 
@@ -90,24 +90,24 @@ def validate(df: pd.DataFrame, cfg: FMEAConfig | None = None) -> pd.DataFrame:
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
-        problems.append(f"colunas ausentes: {missing}")
+        problems.append(f"missing columns: {missing}")
 
     for col in SCALE_COLUMNS:
         if col not in df.columns:
             continue
         s = pd.to_numeric(df[col], errors="coerce")
         if s.isna().any():
-            problems.append(f"'{col}' não numérico nas linhas {df.index[s.isna()].tolist()}")
+            problems.append(f"'{col}' is not numeric on rows {df.index[s.isna()].tolist()}")
             continue
         out = ~s.between(cfg.scale_min, cfg.scale_max)
         if out.any():
             problems.append(
-                f"'{col}' fora da escala {cfg.scale_min}-{cfg.scale_max} "
-                f"nas linhas {df.index[out].tolist()}"
+                f"'{col}' outside the {cfg.scale_min}-{cfg.scale_max} scale "
+                f"on rows {df.index[out].tolist()}"
             )
 
     if problems:
-        raise ValueError("FMEA inválido:\n  - " + "\n  - ".join(problems))
+        raise ValueError("invalid FMEA:\n  - " + "\n  - ".join(problems))
     return df
 
 
@@ -167,14 +167,14 @@ def load_ap_table(path: str | Path) -> dict[tuple[int, int, int], str]:
     df = pd.read_csv(path)
     need = {"severity", "occurrence", "detection", "ap"}
     if not need.issubset(df.columns):
-        raise ValueError(f"CSV da tabela AP precisa das colunas {sorted(need)}")
+        raise ValueError(f"the AP table CSV needs the columns {sorted(need)}")
 
     df = df[df.ap.astype(str).str.strip() != ""]
     table = {}
     for r in df.itertuples(index=False):
         ap = str(r.ap).strip().upper()
         if ap not in {"H", "M", "L"}:
-            raise ValueError(f"AP inválido {ap!r} em S={r.severity} O={r.occurrence} D={r.detection}")
+            raise ValueError(f"invalid AP {ap!r} at S={r.severity} O={r.occurrence} D={r.detection}")
         table[(int(r.severity), int(r.occurrence), int(r.detection))] = ap
     return table
 
@@ -190,7 +190,7 @@ def validate_ap_table(table: dict[tuple[int, int, int], str]) -> None:
     expected = set(product(range(1, 11), repeat=3))
     missing = expected - set(table)
     if missing:
-        raise ValueError(f"tabela AP incompleta: faltam {len(missing)} células, ex.: {sorted(missing)[:5]}")
+        raise ValueError(f"incomplete AP table: {len(missing)} cells missing, e.g. {sorted(missing)[:5]}")
 
     violations = []
     for s, o, d in expected:
@@ -200,7 +200,7 @@ def validate_ap_table(table: dict[tuple[int, int, int], str]) -> None:
                 violations.append(((s, o, d), table[(s, o, d)], nxt, table[nxt]))
     if violations:
         raise ValueError(
-            f"tabela AP não monotônica em {len(violations)} pontos, ex.: {violations[:3]}"
+            f"AP table is not monotonic at {len(violations)} pontos, ex.: {violations[:3]}"
         )
 
 
@@ -212,7 +212,7 @@ def score_ap(df: pd.DataFrame, table: dict[tuple[int, int, int], str]) -> pd.Dat
     def lookup(r) -> str:
         key = (int(r.severity), int(r.occurrence), int(r.detection))
         if key not in table:
-            raise KeyError(f"combinação S/O/D ausente na tabela AP: {key}")
+            raise KeyError(f"S/O/D combination missing from the AP table: {key}")
         return table[key]
 
     out["ap"] = out.apply(lookup, axis=1)
@@ -236,9 +236,9 @@ def failure_mode_criticality(beta, alpha, lambda_p, t):
     beta = np.asarray(beta, dtype=float)
     alpha = np.asarray(alpha, dtype=float)
     if np.any((beta < 0) | (beta > 1)):
-        raise ValueError("beta deve estar em [0, 1]")
+        raise ValueError("beta must lie in [0, 1]")
     if np.any((alpha < 0) | (alpha > 1)):
-        raise ValueError("alpha (failure mode ratio) deve estar em [0, 1]")
+        raise ValueError("alpha (failure mode ratio) must lie in [0, 1]")
     return beta * alpha * np.asarray(lambda_p, dtype=float) * np.asarray(t, dtype=float)
 
 
@@ -251,11 +251,11 @@ def item_criticality(df: pd.DataFrame, group: str = "item") -> pd.DataFrame:
     """
     need = {"item", "severity_category", "beta", "alpha", "lambda_p", "t"}
     if not need.issubset(df.columns):
-        raise ValueError(f"faltam colunas: {sorted(need - set(df.columns))}")
+        raise ValueError(f"missing columns: {sorted(need - set(df.columns))}")
 
     bad = df.loc[~df.severity_category.isin(MIL_SEVERITY_CATEGORIES), "severity_category"]
     if len(bad):
-        raise ValueError(f"categorias inválidas {bad.unique().tolist()}; use I, II, III, IV")
+        raise ValueError(f"invalid categories {bad.unique().tolist()}; use I, II, III, IV")
 
     out = df.copy()
     out["cm"] = failure_mode_criticality(out.beta, out.alpha, out.lambda_p, out.t)
@@ -265,7 +265,7 @@ def item_criticality(df: pd.DataFrame, group: str = "item") -> pd.DataFrame:
     off = sums[(sums - 1.0).abs() > 1e-6]
     if len(off):
         raise ValueError(
-            "failure mode ratios (alpha) não somam 1 para: "
+            "failure mode ratios (alpha) do not sum to 1 for: "
             + ", ".join(f"{k} (soma={v:.4f})" for k, v in off.items())
         )
 

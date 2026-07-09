@@ -78,5 +78,5 @@ def test_split_signed_roundtrip():
 
 
 def test_split_signed_rejects_zero():
-    with pytest.raises(ValueError, match="ambígua"):
+    with pytest.raises(ValueError, match="ambiguous"):
         split_signed([100, 0, -50])

@@ -101,13 +101,13 @@ def effects_table(design: pd.DataFrame, response, max_order: int = 2) -> pd.Data
     """
     y = np.asarray(response, dtype=float)
     if len(y) != len(design):
-        raise ValueError(f"resposta tem {len(y)} valores, design tem {len(design)} corridas")
+        raise ValueError(f"response has {len(y)} values, design has {len(design)} runs")
 
     vals = np.unique(design.to_numpy())
     if not np.all(np.isin(vals, [-1.0, 1.0])):
         raise ValueError(
-            "design deve estar em unidades codificadas ±1; "
-            f"encontrei níveis {vals.tolist()}. Use full_factorial()/code()."
+            "design must be in coded units (±1); "
+            f"found levels {vals.tolist()}. Use full_factorial()/code()."
         )
 
     rows: list[Effect] = []
@@ -130,7 +130,7 @@ def code(values, low: float, high: float) -> np.ndarray:
     """Converte unidades naturais para ±1. O centro vira 0."""
     values = np.asarray(values, dtype=float)
     if high == low:
-        raise ValueError("high e low não podem ser iguais")
+        raise ValueError("high and low cannot be equal")
     mid, half = (high + low) / 2.0, (high - low) / 2.0
     return (values - mid) / half
 

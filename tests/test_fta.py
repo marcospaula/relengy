@@ -54,7 +54,7 @@ def test_pure_or_gate():
 
 
 def test_missing_probability_is_an_error():
-    with pytest.raises(ValueError, match="sem probabilidade"):
+    with pytest.raises(ValueError, match="no probability"):
         simple_tree().top_probability({"A": 0.1, "B": 0.2})
 
 

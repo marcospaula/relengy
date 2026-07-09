@@ -34,7 +34,7 @@ def test_beta_below_one_means_growth_not_infant_mortality():
     """O beta do Crow-AMSAA e o oposto do beta da Weibull."""
     ca = crow_amsaa(WIKI)
     assert ca.beta < 1
-    assert "CRESCENDO" in ca.verdict()
+    assert "IMPROVING" in ca.verdict()
 
 def test_cumulative_mtbf_is_pessimistic_under_growth():
     """Com beta<1 o MTBF cumulativo carrega as falhas antigas: subestima o atual."""
@@ -68,15 +68,15 @@ def test_unbiased_beta_is_smaller():
 # ---- time terminated ----
 
 def test_time_terminated_needs_t_end():
-    with pytest.raises(ValueError, match="exige t_end"):
+    with pytest.raises(ValueError, match="requires t_end"):
         crow_amsaa(WIKI, termination="time")
 
 def test_time_terminated_t_end_before_last_failure_rejected():
-    with pytest.raises(ValueError, match="não pode ser menor"):
+    with pytest.raises(ValueError, match="cannot be smaller"):
         crow_amsaa(WIKI, t_end=500, termination="time")
 
 def test_failure_terminated_rejects_inconsistent_t_end():
-    with pytest.raises(ValueError, match="último tempo de falha"):
+    with pytest.raises(ValueError, match="last failure time"):
         crow_amsaa(WIKI, t_end=700, termination="failure")
 
 def test_longer_test_without_new_failures_lowers_beta():
@@ -95,18 +95,18 @@ def test_time_to_reach_target_mtbf():
 def test_time_to_reach_mtbf_impossible_when_deteriorating():
     ca = CrowAMSAA(beta=1.4, lam=0.01, n_failures=10, t_end=100,
                    termination="failure", unbiased=False)
-    with pytest.raises(ValueError, match="não está melhorando"):
+    with pytest.raises(ValueError, match="not improving"):
         ca.time_to_reach_mtbf(500)
 
 
 # ---- validacao de entrada ----
 
 def test_rejects_non_increasing_times():
-    with pytest.raises(ValueError, match="crescentes"):
+    with pytest.raises(ValueError, match="strictly increasing"):
         crow_amsaa([10, 5, 20])
 
 def test_rejects_too_few_failures():
-    with pytest.raises(ValueError, match="pelo menos 2"):
+    with pytest.raises(ValueError, match="at least 2"):
         crow_amsaa([10])
 
 
@@ -124,5 +124,5 @@ def test_duane_instantaneous_exceeds_cumulative():
 def test_duane_instantaneous_undefined_when_alpha_ge_one():
     d = duane(WIKI)
     d.alpha = 1.0
-    with pytest.raises(ValueError, match="indefinido"):
+    with pytest.raises(ValueError, match="undefined"):
         d.instantaneous_mtbf(620)

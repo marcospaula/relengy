@@ -23,11 +23,11 @@ def split_signed(values) -> tuple[np.ndarray, np.ndarray]:
 
     if np.any(arr == 0):
         raise ValueError(
-            "idade zero é ambígua nesta convenção: o sinal não distingue "
-            "falha de suspensão em t=0. Trate esses registros explicitamente."
+            "age zero is ambiguous in this convention: the sign cannot tell a "
+            "failure from a suspension at t=0. Handle those records explicitly."
         )
     if np.any(np.isnan(arr)):
-        raise ValueError("valores NaN presentes; limpe os dados antes de converter.")
+        raise ValueError("NaN values present; clean the data before converting.")
 
     failures = arr[arr > 0]
     censored = -arr[arr < 0]
@@ -39,5 +39,5 @@ def to_signed(failures, right_censored=()) -> np.ndarray:
     f = np.asarray(failures, dtype=float)
     c = np.asarray(right_censored, dtype=float)
     if np.any(f <= 0) or np.any(c <= 0):
-        raise ValueError("idades devem ser estritamente positivas.")
+        raise ValueError("ages must be strictly positive.")
     return np.concatenate([f, -c])

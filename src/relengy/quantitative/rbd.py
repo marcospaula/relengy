@@ -50,7 +50,7 @@ class Component(Node):
         try:
             return r[self.name]
         except KeyError:
-            raise KeyError(f"sem confiabilidade para o componente {self.name!r}") from None
+            raise KeyError(f"no reliability for component {self.name!r}") from None
 
     def components(self) -> set[str]:
         return {self.name}
@@ -62,7 +62,7 @@ class Series(Node):
 
     def __init__(self, *children: Node):
         if not children:
-            raise ValueError("Series precisa de ao menos um bloco")
+            raise ValueError("Series needs at least one block")
         object.__setattr__(self, "children", tuple(children))
 
     def reliability(self, r: dict[str, float]) -> float:
@@ -81,7 +81,7 @@ class Parallel(Node):
 
     def __init__(self, *children: Node):
         if not children:
-            raise ValueError("Parallel precisa de ao menos um bloco")
+            raise ValueError("Parallel needs at least one block")
         object.__setattr__(self, "children", tuple(children))
 
     def reliability(self, r: dict[str, float]) -> float:
@@ -109,9 +109,9 @@ class KooN(Node):
     def __init__(self, k: int, *children: Node):
         n = len(children)
         if n == 0:
-            raise ValueError("KooN precisa de blocos")
+            raise ValueError("KooN needs blocks")
         if not 1 <= k <= n:
-            raise ValueError(f"k={k} fora de 1..{n}")
+            raise ValueError(f"k={k} outside 1..{n}")
         object.__setattr__(self, "k", k)
         object.__setattr__(self, "children", tuple(children))
 
@@ -165,8 +165,8 @@ def criticality_importance(system: Node, r: dict[str, float]) -> dict[str, float
     r_sys = system.reliability(r)
     if math.isclose(r_sys, 1.0):
         raise ValueError(
-            "R_sys = 1: nenhum componente pode ser crítico; a importância de "
-            "criticidade é indefinida (divisão por zero)"
+            "R_sys = 1: no component can be critical; criticality importance is "
+            "undefined (division by zero)"
         )
     ib = birnbaum_importance(system, r)
     return {n: ib[n] * (1.0 - r[n]) / (1.0 - r_sys) for n in sorted(ib)}
@@ -175,10 +175,10 @@ def criticality_importance(system: Node, r: dict[str, float]) -> dict[str, float
 def _validate(system: Node, r: dict[str, float]) -> None:
     missing = system.components() - set(r)
     if missing:
-        raise KeyError(f"sem confiabilidade para: {sorted(missing)}")
+        raise KeyError(f"no reliability given for: {sorted(missing)}")
     bad = {n: v for n, v in r.items() if not 0.0 <= v <= 1.0}
     if bad:
-        raise ValueError(f"confiabilidades fora de [0,1]: {bad}")
+        raise ValueError(f"reliabilities outside [0,1]: {bad}")
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ def weibull_reliability(t: float, beta: float, eta: float) -> float:
     if t < 0:
         raise ValueError("t < 0")
     if beta <= 0 or eta <= 0:
-        raise ValueError("beta e eta devem ser positivos")
+        raise ValueError("beta and eta must be positive")
     return math.exp(-((t / eta) ** beta))
 
 

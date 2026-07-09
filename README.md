@@ -58,9 +58,10 @@ failures      = [30, 49, 82, 90, 96]
 right_censored = [100, 100, 100]
 
 d = fit_diagnostic(failures, right_censored)
-print(d.regime())                    # 'desgaste inicial (1 < beta < 4)'
+print(d.regime())                    # 'early wear-out (1 < beta < 4)'
 print(d.recommendation().method)     # 'RRX'
-print(d.recommendation().reason)     # the reasoning, and whose it is
+print(d.recommendation().reason)     # 'small sample (5 failures) and light censoring:
+                                     #  exactly the case where Abernethy and ReliaSoft agree'
 print(d.report())                    # the whole diagnosis, in prose
 ```
 
@@ -129,15 +130,15 @@ Deliberately not published yet: a knowledge-graph module (failure mechanisms as
 first-class nodes) and failure-mode similarity. They work, but the design has not
 settled, and an unstable module in a small library costs more than it gives.
 
-**On language:** identifiers and the public API are English. Docstrings — and the
-explanatory strings the library returns, such as `regime()`, `verdict()` and
-`recommendation().reason` — are still in Portuguese. They are dense technical
-arguments rather than comments, and translating them badly would be worse than
-leaving them for now. You can see this in the first example above.
+**On language:** everything the library *says* is English — the public API, every
+error message, and the explanatory prose returned by `regime()`, `verdict()`,
+`report()` and `recommendation().reason`.
 
-Translation is happening in two passes: the returned strings first (a small,
-bounded set), the docstrings module by module after. Contributions welcome — that
-is a good first issue.
+The **docstrings** are still in Portuguese. They are dense technical arguments
+rather than comments — several of them reconcile Abernethy against ReliaSoft
+before the code takes a side — and translating them badly would be worse than
+leaving them. They are being translated module by module. Contributions welcome;
+that is a good first issue.
 
 ---
 

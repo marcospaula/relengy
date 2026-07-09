@@ -51,7 +51,7 @@ class FaultTree:
         if gate == "AND":
             # Produto cartesiano: precisa de todos os filhos simultaneamente.
             return [frozenset().union(*combo) for combo in product(*child_sets)]
-        raise ValueError(f"gate desconhecido: {gate!r}")
+        raise ValueError(f"unknown gate: {gate!r}")
 
     def minimal_cut_sets(self) -> list[frozenset[str]]:
         """Cut sets após remover os supersets (minimalização por absorção)."""
@@ -83,7 +83,7 @@ class FaultTree:
         """
         missing = self.basic_events() - set(probs)
         if missing:
-            raise ValueError(f"sem probabilidade para os basic events: {sorted(missing)}")
+            raise ValueError(f"no probability given for basic events: {sorted(missing)}")
 
         mcs = self.minimal_cut_sets()
 

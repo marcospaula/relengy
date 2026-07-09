@@ -20,7 +20,7 @@ def test_temperature_humidity_is_dual_exponential():
     assert fitter_name("Temperature-Humidity") == "Fit_Weibull_Dual_Exponential"
 
 def test_unknown_model_rejected():
-    with pytest.raises(KeyError, match="desconhecido"):
+    with pytest.raises(KeyError, match="unknown model"):
         fitter_name("Coffin-Manson")
 
 def test_the_fitters_actually_exist_in_reliability():
@@ -43,7 +43,7 @@ def test_kelvin_conversion():
     assert celsius_to_kelvin(85) == pytest.approx(358.15)
 
 def test_zero_kelvin_rejected():
-    with pytest.raises(ValueError, match="impossível"):
+    with pytest.raises(ValueError, match="impossible"):
         arrhenius_life(0.0, 1.0, 5000.0)
 
 
@@ -77,13 +77,13 @@ def test_arrhenius_af_equals_life_ratio():
         arrhenius_life(vu, c, b) / arrhenius_life(va, c, b))
 
 def test_arrhenius_af_needs_exactly_one_of_b_or_ea():
-    with pytest.raises(ValueError, match="exatamente um"):
+    with pytest.raises(ValueError, match="exactly one"):
         arrhenius_af(313.15, 398.15)
-    with pytest.raises(ValueError, match="exatamente um"):
+    with pytest.raises(ValueError, match="exactly one"):
         arrhenius_af(313.15, 398.15, b=8000.0, ea_ev=0.7)
 
 def test_arrhenius_af_rejects_non_accelerating_stress():
-    with pytest.raises(ValueError, match="deve ser MAIOR"):
+    with pytest.raises(ValueError, match="must be HIGHER"):
         arrhenius_af(398.15, 313.15, ea_ev=0.7)
 
 def test_ipl_af_hand_calculation():
@@ -116,5 +116,5 @@ def test_required_test_time_is_the_inverse_of_extrapolate():
     assert required_test_time(5000.0, af=50.0) == pytest.approx(100.0)
 
 def test_af_below_one_rejected():
-    with pytest.raises(ValueError, match="não acelerou"):
+    with pytest.raises(ValueError, match="accelerated nothing"):
         extrapolate_life(100.0, af=0.5)

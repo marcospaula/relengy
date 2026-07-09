@@ -21,7 +21,7 @@ def base_df():
 def test_validate_rejects_out_of_scale():
     df = base_df()
     df.loc[0, "severity"] = 11
-    with pytest.raises(ValueError, match="fora da escala"):
+    with pytest.raises(ValueError, match="outside the"):
         validate(df)
 
 def test_validate_reports_all_problems_at_once():
@@ -29,7 +29,7 @@ def test_validate_reports_all_problems_at_once():
     df.loc[0, "detection"] = 99
     with pytest.raises(ValueError) as e:
         validate(df)
-    assert "colunas ausentes" in str(e.value) and "fora da escala" in str(e.value)
+    assert "missing columns" in str(e.value) and "outside the" in str(e.value)
 
 def test_rpn_and_severity_override():
     out = score_rpn(base_df())
@@ -47,14 +47,14 @@ def test_ap_template_is_complete_and_empty():
     assert (t.ap == "").all()
 
 def test_validate_ap_table_catches_incomplete():
-    with pytest.raises(ValueError, match="incompleta"):
+    with pytest.raises(ValueError, match="incomplete"):
         validate_ap_table({(1, 1, 1): "L"})
 
 def test_validate_ap_table_catches_non_monotonic():
     # tabela toda "L" exceto um ponto onde subir D reduz a prioridade
     table = {k: "H" for k in __import__("itertools").product(range(1, 11), repeat=3)}
     table[(5, 5, 6)] = "L"   # subir D de 5 para 6 derruba H -> L
-    with pytest.raises(ValueError, match="não monotônica"):
+    with pytest.raises(ValueError, match="not monotonic"):
         validate_ap_table(table)
 
 def test_score_ap_uses_lookup_not_formula():
@@ -90,7 +90,7 @@ def test_item_criticality_rejects_alpha_not_summing_to_one():
         "item": ["bomba", "bomba"], "severity_category": ["II", "II"],
         "beta": [1.0, 1.0], "alpha": [0.7, 0.7], "lambda_p": [1e-5, 1e-5], "t": [100, 100],
     })
-    with pytest.raises(ValueError, match="não somam 1"):
+    with pytest.raises(ValueError, match="do not sum to 1"):
         item_criticality(df)
 
 def test_item_criticality_rejects_bad_category():
@@ -98,5 +98,5 @@ def test_item_criticality_rejects_bad_category():
         "item": ["b"], "severity_category": ["V"],
         "beta": [1.0], "alpha": [1.0], "lambda_p": [1e-5], "t": [100],
     })
-    with pytest.raises(ValueError, match="categorias inválidas"):
+    with pytest.raises(ValueError, match="invalid categories"):
         item_criticality(df)

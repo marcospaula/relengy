@@ -55,7 +55,7 @@ class MethodRecommendation:
 
     def __str__(self) -> str:
         s = f"{self.method}: {self.reason}"
-        return f"{s}\n  CUIDADO: {self.caution}" if self.caution else s
+        return f"{s}\n  CAUTION: {self.caution}" if self.caution else s
 
 
 def recommend_method(
@@ -82,46 +82,46 @@ def recommend_method(
     if n_failures == 0:
         return MethodRecommendation(
             "MLE",
-            "sem falhas observadas; MRR é impossível (não há ranks a ajustar)",
-            caution="considere Weibayes (beta fixado) — handbook cap. 6",
+            "no observed failures; MRR is impossible (there are no ranks to fit)",
+            caution="consider Weibayes (beta held fixed) — handbook ch. 6",
         )
 
     if interval_data:
         return MethodRecommendation(
             "MLE",
-            "dados intervalares (inspeção): MRR depende de tempos exatos de falha",
+            "interval data (periodic inspection): MRR needs exact failure times",
         )
 
     if heavy or uneven_censoring:
-        motivo = []
+        why = []
         if heavy:
-            motivo.append(f"censura pesada ({frac:.0%} suspensões)")
+            why.append(f"heavy censoring ({frac:.0%} suspensions)")
         if uneven_censoring:
-            motivo.append("censura desigual")
+            why.append("uneven censoring")
         rec = MethodRecommendation(
             "MLE",
-            " e ".join(motivo) + ": as plotting positions do MRR perdem informação",
+            " and ".join(why) + ": the MRR plotting positions lose information",
         )
         if small:
             rec.caution = (
-                f"amostra pequena ({n_failures} falhas): o beta do MLE é "
-                "notoriamente enviesado aqui. Use correção de viés (RBA) — "
-                "o pacote `predictr` implementa — ou Weibayes."
+                f"small sample ({n_failures} failures): the MLE beta is notoriously "
+                "biased here. Use a reduced bias adjustment (RBA) — the `predictr` "
+                "package implements one — or Weibayes."
             )
         return rec
 
     if small:
         return MethodRecommendation(
             "RRX",
-            f"amostra pequena ({n_failures} falhas) e censura leve: "
-            "exatamente o caso em que Abernethy e ReliaSoft concordam",
+            f"small sample ({n_failures} failures) and light censoring: "
+            "exactly the case where Abernethy and ReliaSoft agree",
         )
 
     return MethodRecommendation(
         "RRX",
-        "censura leve; MRR é a best practice do handbook e dá o gráfico",
-        caution="com n grande e sem censura, MLE também é válido — "
-                "se discordarem muito, investigue batch problem",
+        "light censoring; MRR is the handbook's best practice and gives you the plot",
+        caution="with large n and no censoring, MLE is valid too — if the two "
+                "disagree sharply, investigate a batch problem",
     )
 
 
@@ -162,35 +162,35 @@ class WeibullDiagnosis:
         """Leitura física de beta (handbook 2.13-2.16), a partir do MRR."""
         b = self.beta_mrr
         if b < 1.0:
-            return "mortalidade infantil (beta < 1)"
+            return "infant mortality (beta < 1)"
         if b == 1.0:
-            return "falhas aleatorias (beta = 1)"
+            return "random failures (beta = 1)"
         if b < 4.0:
-            return "desgaste inicial (1 < beta < 4)"
-        return "desgaste de velhice, rapido (beta > 4)"
+            return "early wear-out (1 < beta < 4)"
+        return "rapid old-age wear-out (beta > 4)"
 
     def report(self, uneven_censoring: bool = False,
                interval_data: bool = False) -> str:
         rec = self.recommendation(uneven_censoring, interval_data)
         linhas = [
-            f"n = {self.n_failures} falhas, {self.n_censored} suspensoes "
-            f"({self.censoring_fraction:.0%} censurado)",
+            f"n = {self.n_failures} failures, {self.n_censored} suspensions "
+            f"({self.censoring_fraction:.0%} censored)",
             f"MRR: beta = {self.beta_mrr:.4f}  eta = {self.eta_mrr:.2f}",
             f"MLE: beta = {self.beta_mle:.4f}  eta = {self.eta_mle:.2f}",
-            f"razao beta_mle/beta_mrr = {self.ratio:.3f}",
+            f"ratio beta_mle/beta_mrr = {self.ratio:.3f}",
             f"regime: {self.regime()}",
             "",
-            f"METODO RECOMENDADO -> {rec}",
+            f"RECOMMENDED METHOD -> {rec}",
         ]
         if self.batch_suspected:
             linhas.append(
-                "ALERTA: beta do MLE bem abaixo do MRR -> suspeita de batch problem "
-                "(handbook 5.3.3 / 3.9). Investigue mistura de lotes antes de usar o ajuste."
+                "ALERT: the MLE beta is far below the MRR one -> suspected batch problem "
+                "(handbook 5.3.3 / 3.9). Investigate a mixture of lots before trusting the fit."
             )
         if self.small_sample:
             linhas.append(
-                "NOTA: amostra pequena (<= 20 falhas). Considere Weibayes com beta "
-                "vindo da Weibull Library (handbook cap. 6)."
+                "NOTE: small sample (<= 20 failures). Consider Weibayes, with beta "
+                "taken from your Weibull Library (handbook ch. 6)."
             )
         return "\n".join(linhas)
 

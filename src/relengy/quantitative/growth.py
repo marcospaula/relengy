@@ -81,10 +81,10 @@ class CrowAMSAA:
 
     def verdict(self) -> str:
         if self.beta < 1.0:
-            return f"confiabilidade CRESCENDO (beta={self.beta:.4f} < 1)"
+            return f"reliability IMPROVING (beta={self.beta:.4f} < 1)"
         if self.beta == 1.0:
-            return "sem crescimento: processo de Poisson homogêneo (beta = 1)"
-        return f"confiabilidade PIORANDO (beta={self.beta:.4f} > 1)"
+            return "no growth: homogeneous Poisson process (beta = 1)"
+        return f"reliability DETERIORATING (beta={self.beta:.4f} > 1)"
 
     def time_to_reach_mtbf(self, target_mtbf: float) -> float:
         """Quanto tempo de teste até o MTBF instantâneo atingir o alvo.
@@ -94,20 +94,20 @@ class CrowAMSAA:
         """
         if self.beta >= 1.0:
             raise ValueError(
-                f"beta = {self.beta:.4f} >= 1: o sistema não está melhorando, "
-                "o MTBF instantâneo nunca alcança o alvo"
+                f"beta = {self.beta:.4f} >= 1: the system is not improving, "
+                "the instantaneous MTBF never reaches the target"
             )
         # 1/(λβT^(β−1)) = alvo  =>  T^(1−β) = alvo·λ·β
         return (target_mtbf * self.lam * self.beta) ** (1.0 / (1.0 - self.beta))
 
     def report(self) -> str:
         return "\n".join([
-            f"n = {self.n_failures} falhas, teste terminado por {self.termination} em T = {self.t_end:g}",
-            f"beta   = {self.beta:.4f}{' (nao-enviesado)' if self.unbiased else ' (MLE, enviesado)'}",
+            f"n = {self.n_failures} failures, {self.termination}-terminated test at T = {self.t_end:g}",
+            f"beta   = {self.beta:.4f}{' (unbiased)' if self.unbiased else ' (MLE, biased)'}",
             f"lambda = {self.lam:.4f}",
             f"{self.verdict()}",
-            f"MTBF instantaneo em T = {self.instantaneous_mtbf():.1f}",
-            f"MTBF cumulativo  em T = {self.cumulative_mtbf():.1f}",
+            f"instantaneous MTBF at T = {self.instantaneous_mtbf():.1f}",
+            f"cumulative    MTBF at T = {self.cumulative_mtbf():.1f}",
         ])
 
 
@@ -125,31 +125,31 @@ def crow_amsaa(
     t = np.asarray(failure_times, dtype=float)
     n = t.size
     if n < 2:
-        raise ValueError("Crow-AMSAA precisa de pelo menos 2 falhas")
+        raise ValueError("Crow-AMSAA needs at least 2 failures")
     if np.any(t <= 0):
-        raise ValueError("tempos acumulados devem ser positivos")
+        raise ValueError("cumulative times must be positive")
     if np.any(np.diff(t) <= 0):
-        raise ValueError("tempos acumulados devem ser estritamente crescentes")
+        raise ValueError("cumulative times must be strictly increasing")
 
     if termination == "failure":
         if t_end is not None and not math.isclose(t_end, t[-1]):
             raise ValueError(
-                "teste terminado por falha: t_end é o último tempo de falha "
-                f"({t[-1]:g}), não {t_end:g}"
+                "failure-terminated test: t_end is the last failure time "
+                f"({t[-1]:g}), not {t_end:g}"
             )
         t_star = float(t[-1])
     elif termination == "time":
         if t_end is None:
-            raise ValueError("teste terminado por tempo exige t_end")
+            raise ValueError("a time-terminated test requires t_end")
         if t_end < t[-1]:
-            raise ValueError(f"t_end ({t_end:g}) não pode ser menor que a última falha ({t[-1]:g})")
+            raise ValueError(f"t_end ({t_end:g}) cannot be smaller than the last failure ({t[-1]:g})")
         t_star = float(t_end)
     else:
-        raise ValueError(f"termination inválido: {termination!r}")
+        raise ValueError(f"invalid termination: {termination!r}")
 
     denom = n * math.log(t_star) - float(np.sum(np.log(t)))
     if denom <= 0:
-        raise ValueError("denominador não-positivo: verifique os tempos acumulados")
+        raise ValueError("non-positive denominator: check the cumulative times")
     beta = n / denom
 
     if unbiased:
@@ -177,7 +177,7 @@ class Duane:
     def instantaneous_mtbf(self, t: float) -> float:
         """m_i = m_c / (1 − α). Diverge quando α → 1."""
         if self.alpha >= 1.0:
-            raise ValueError(f"alpha = {self.alpha:.4f} >= 1: MTBF instantâneo indefinido")
+            raise ValueError(f"alpha = {self.alpha:.4f} >= 1: instantaneous MTBF is undefined")
         return self.cumulative_mtbf(t) / (1.0 - self.alpha)
 
 
@@ -190,9 +190,9 @@ def duane(failure_times: Sequence[float]) -> Duane:
     """
     t = np.asarray(failure_times, dtype=float)
     if t.size < 2:
-        raise ValueError("Duane precisa de pelo menos 2 falhas")
+        raise ValueError("Duane needs at least 2 failures")
     if np.any(np.diff(t) <= 0):
-        raise ValueError("tempos acumulados devem ser estritamente crescentes")
+        raise ValueError("cumulative times must be strictly increasing")
 
     n = np.arange(1, t.size + 1)
     mtbf_c = t / n                       # MTBF cumulativo observado

@@ -29,12 +29,12 @@ def test_effects_recover_known_model():
 def test_effects_rejects_uncoded_design():
     import pandas as pd
     d = pd.DataFrame({"A": [0, 1, 0, 1], "B": [0, 0, 1, 1]})
-    with pytest.raises(ValueError, match="±1"):
+    with pytest.raises(ValueError, match="coded units"):
         effects_table(d, [1, 2, 3, 4])
 
 def test_effects_rejects_length_mismatch():
     d = full_factorial(["A", "B"])
-    with pytest.raises(ValueError, match="resposta tem"):
+    with pytest.raises(ValueError, match="response has"):
         effects_table(d, [1, 2, 3])
 
 def test_pareto_orders_by_absolute_effect():

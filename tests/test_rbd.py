@@ -112,19 +112,19 @@ def test_criticality_undefined_for_perfect_system():
 # ---- validacao ----
 
 def test_missing_component_reliability():
-    with pytest.raises(KeyError, match="sem confiabilidade"):
+    with pytest.raises(KeyError, match="no reliability"):
         Series(A, B).reliability({"A": 0.9})
 
 def test_reliability_outside_unit_interval_rejected():
-    with pytest.raises(ValueError, match="fora de"):
+    with pytest.raises(ValueError, match="outside"):
         birnbaum_importance(Series(A), {"A": 1.5})
 
 def test_koon_k_out_of_range():
-    with pytest.raises(ValueError, match="fora de"):
+    with pytest.raises(ValueError, match="outside"):
         KooN(4, A, B, C)
 
 def test_empty_series_rejected():
-    with pytest.raises(ValueError, match="ao menos um"):
+    with pytest.raises(ValueError, match="at least one"):
         Series()
 
 
