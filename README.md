@@ -2,9 +2,9 @@
 
 **Reliability engineering in Python — with the method decisions written down where the code makes them.**
 
+[![CI](https://github.com/marcospaula/relengy/actions/workflows/ci.yml/badge.svg)](https://github.com/marcospaula/relengy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-117%20passing-brightgreen)
 
 Life data analysis, reliability growth, accelerated testing, reliability block
 diagrams, FMEA and fault trees.
