@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "relengy"
+version = "0.1.0"
+description = "Reliability engineering in Python: life data analysis, reliability growth, accelerated testing, RBD, FMEA and fault trees — with the method decisions written down where the code makes them."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Marcos de Paula" }]
+keywords = [
+    "reliability",
+    "weibull",
+    "maintenance",
+    "fmea",
+    "fault-tree",
+    "crow-amsaa",
+    "accelerated-life-testing",
+    "rbd",
+    "asset-management",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Manufacturing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+
+# O núcleo. Tudo o mais é opcional, de propósito: uma biblioteca não deve
+# arrastar jupyterlab para dentro do ambiente de quem só quer ajustar um Weibull.
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "reliability>=0.8",
+]
+
+[project.optional-dependencies]
+doe = ["pyDOE3>=1.0"]           # quantitative.doe
+docx = ["python-docx>=1.1"]     # report.to_docx  (to_markdown não precisa)
+all = ["relengy[doe,docx]"]
+dev = ["relengy[doe,docx]", "pytest>=8", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/marcospaula/relengy"
+Issues = "https://github.com/marcospaula/relengy/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/relengy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
