@@ -61,3 +61,11 @@ def test_report_changes_when_interval_data_declared():
     d = fit_diagnostic([30, 49, 82, 90, 96], [10, 45, 100])
     assert "RRX" in d.report()
     assert "MLE" in d.report(interval_data=True).split("RECOMMENDED METHOD")[1]
+
+@pytest.mark.parametrize("failures", [[], [50]])
+def test_fit_diagnostic_needs_two_failures_and_points_to_weibayes(failures):
+    """0 ou 1 falha: erro de dominio (Weibayes), nao erro opaco da dependencia."""
+    with pytest.raises(ValueError, match="at least 2 failures"):
+        fit_diagnostic(failures, right_censored=[100, 100])
+    with pytest.raises(ValueError, match="Weibayes"):
+        fit_diagnostic(failures)

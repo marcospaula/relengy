@@ -196,8 +196,23 @@ class WeibullDiagnosis:
 
 
 def fit_diagnostic(failures, right_censored=None) -> WeibullDiagnosis:
-    """Ajusta Weibull 2P por MRR e por MLE e devolve o par para comparação."""
+    """Ajusta Weibull 2P por MRR e por MLE e devolve o par para comparação.
+
+    Exige ao menos 2 falhas. Com 0 ou 1 falha uma Weibull de 2 parâmetros não se
+    ajusta por regressão (não há reta por menos de dois pontos) e o MLE é pouco
+    confiável — é o caso de Weibayes (beta fixo), não deste diagnóstico. Ver
+    `recommend_method`, que trata n=0 explicitamente.
+    """
+    failures = list(failures)
     rc = list(right_censored) if right_censored is not None else None
+    if len(failures) < 2:
+        raise ValueError(
+            f"fit_diagnostic needs at least 2 failures; got {len(failures)}. "
+            "A two-parameter Weibull cannot be fit by rank regression (no line "
+            "through fewer than two points) and MLE is unreliable with 0-1 "
+            "failures. Hold beta from your Weibull Library and use Weibayes "
+            "(handbook ch. 6); see recommend_method() for the choice."
+        )
     common = dict(
         failures=list(failures),
         right_censored=rc,
