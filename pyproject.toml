@@ -50,6 +50,8 @@ Issues = "https://github.com/marcospaula/relengy/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/relengy"]
+# py.typed é um marcador PEP 561; garante que ele viaje no wheel.
+artifacts = ["src/relengy/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
