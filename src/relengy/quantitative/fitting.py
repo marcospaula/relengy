@@ -164,6 +164,18 @@ class WeibullDiagnosis:
     def batch_suspected(self) -> bool:
         return self.ratio < BATCH_SUSPICION_RATIO
 
+    @property
+    def batch_margin(self) -> float:
+        """Distância (com sinal) da razão até o corte de suspeita de batch.
+
+        `BATCH_SUSPICION_RATIO - ratio`: positiva quando `batch_suspected` (a
+        razão está ABAIXO do corte — e quanto maior, mais forte o sinal),
+        negativa quando há folga. Existe para que 0.74 e 0.20 não soem
+        igualmente conclusivos só por dispararem o mesmo booleano: expõe o
+        *quão longe* do limiar, que é o julgamento que o booleano esconde.
+        """
+        return BATCH_SUSPICION_RATIO - self.ratio
+
     def regime(self) -> str:
         """Leitura física de beta (handbook 2.13-2.16), a partir do MRR."""
         b = self.beta_mrr
@@ -183,15 +195,20 @@ class WeibullDiagnosis:
             f"({self.censoring_fraction:.0%} censored)",
             f"MRR: beta = {self.beta_mrr:.4f}  eta = {self.eta_mrr:.2f}",
             f"MLE: beta = {self.beta_mle:.4f}  eta = {self.eta_mle:.2f}",
-            f"ratio beta_mle/beta_mrr = {self.ratio:.3f}",
+            f"ratio beta_mle/beta_mrr = {self.ratio:.3f}  "
+            f"({abs(self.batch_margin):.3f} "
+            f"{'below' if self.batch_margin > 0 else 'above'} "
+            f"the {BATCH_SUSPICION_RATIO} batch line)",
             f"regime: {self.regime()}",
             "",
             f"RECOMMENDED METHOD -> {rec}",
         ]
         if self.batch_suspected:
             linhas.append(
-                "ALERT: the MLE beta is far below the MRR one -> suspected batch problem "
-                "(handbook 5.3.3 / 3.9). Investigate a mixture of lots before trusting the fit."
+                f"ALERT: MLE/MRR beta ratio {self.ratio:.3f} sits {self.batch_margin:.3f} "
+                f"past the {BATCH_SUSPICION_RATIO} line -> suspected batch problem "
+                "(handbook 5.3.3 / 3.9). The wider this gap, the stronger the signal; "
+                "investigate a mixture of lots before trusting the fit."
             )
         if self.small_sample:
             linhas.append(

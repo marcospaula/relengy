@@ -13,6 +13,12 @@ def _diag(beta_mrr: float) -> WeibullDiagnosis:
     return WeibullDiagnosis(beta_mrr=beta_mrr, eta_mrr=100.0, beta_mle=beta_mrr,
                             eta_mle=100.0, n_failures=10, n_censored=0)
 
+
+def _diag_ratio(ratio: float) -> WeibullDiagnosis:
+    """Diagnostico com razao beta_mle/beta_mrr controlada, para o sinal de batch."""
+    return WeibullDiagnosis(beta_mrr=2.0, eta_mrr=100.0, beta_mle=2.0 * ratio,
+                            eta_mle=100.0, n_failures=10, n_censored=0)
+
 def test_small_sample_light_censoring_uses_rrx():
     """O caso em que as duas fontes concordam: MRR."""
     r = recommend_method(n_failures=8, n_censored=1)
@@ -87,3 +93,33 @@ def test_regime_uses_a_band_around_one_not_exact_equality():
     assert "random failures" in _diag(1.05).regime()       # borda superior (inclusiva)
     assert "early wear-out" in _diag(1.10).regime()        # acima da banda
     assert "rapid old-age" in _diag(5.0).regime()
+
+
+def test_batch_margin_exposes_signed_distance_to_the_cutoff():
+    """O booleano esconde o grau; batch_margin mostra o quao longe do corte."""
+    blatant = _diag_ratio(0.20)
+    marginal = _diag_ratio(0.74)
+    clean = _diag_ratio(0.90)
+
+    assert blatant.batch_suspected and marginal.batch_suspected
+    assert not clean.batch_suspected
+
+    # positivo quando suspeito, e maior = mais forte
+    assert blatant.batch_margin == pytest.approx(0.55)
+    assert marginal.batch_margin == pytest.approx(0.01)
+    assert blatant.batch_margin > marginal.batch_margin
+    # negativo quando ha folga
+    assert clean.batch_margin == pytest.approx(-0.15)
+
+
+def test_report_shows_how_far_past_the_batch_line_not_just_the_flag():
+    """0.74 e 0.20 disparam o mesmo flag, mas o report os distingue pela distancia."""
+    marginal = _diag_ratio(0.74).report()
+    blatant = _diag_ratio(0.20).report()
+
+    assert "0.010" in marginal and "0.75" in marginal     # limitrofe: 0.01 do corte
+    assert "0.550" in blatant                              # gritante: 0.55 do corte
+    assert marginal != blatant                             # nao soam iguais
+
+    # sem suspeita, a linha da razao ainda diz o lado (folga acima do corte)
+    assert "above the 0.75 batch line" in _diag_ratio(0.90).report()
