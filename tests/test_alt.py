@@ -3,8 +3,9 @@ import pytest
 
 from relengy.quantitative.alt import (
     BOLTZMANN_EV_PER_K, B_to_activation_energy, activation_energy_to_B,
-    arrhenius_af, arrhenius_life, celsius_to_kelvin, eyring_af, eyring_life,
-    extrapolate_life, fitter_name, ipl_af, ipl_life, required_test_time,
+    arrhenius_af, arrhenius_life, celsius_to_kelvin, coffin_manson_af,
+    equivalent_time_table, eyring_af, eyring_life, extrapolate_life,
+    fitter_name, hallberg_peck_af, ipl_af, ipl_life, required_test_time,
 )
 
 # ---- o mapeamento de nomes, que nao e obvio ----
@@ -118,3 +119,68 @@ def test_required_test_time_is_the_inverse_of_extrapolate():
 def test_af_below_one_rejected():
     with pytest.raises(ValueError, match="accelerated nothing"):
         extrapolate_life(100.0, af=0.5)
+
+
+# ---- Coffin-Manson (fadiga termomecanica) ----
+
+def test_coffin_manson_hand_calculation():
+    """(ΔT_acc/ΔT_uso)^m = (205/76)^4 ~ 52.9. Bate com 54750/1034 = 52.95 cls."""
+    assert coffin_manson_af(76.0, 205.0, m=4.0) == pytest.approx((205 / 76) ** 4)
+    assert coffin_manson_af(76.0, 205.0, m=4.0) == pytest.approx(52.95, rel=1e-3)
+
+def test_coffin_manson_rejects_non_accelerating_amplitude():
+    with pytest.raises(ValueError, match="must be LARGER"):
+        coffin_manson_af(205.0, 76.0, m=4.0)
+
+def test_coffin_manson_rejects_bad_inputs():
+    with pytest.raises(ValueError, match="positive"):
+        coffin_manson_af(-1.0, 205.0, m=4.0)
+    with pytest.raises(ValueError, match="exponent m"):
+        coffin_manson_af(76.0, 205.0, m=0.0)
+
+
+# ---- Hallberg-Peck (temperatura + umidade) ----
+
+def test_hallberg_peck_factorizes_into_humidity_times_arrhenius():
+    vu, va = 305.15, 358.15
+    rh_factor = (0.9 / 0.5) ** 3.0
+    assert hallberg_peck_af(vu, va, 0.5, 0.9, p=3.0, ea_ev=0.8) == pytest.approx(
+        rh_factor * arrhenius_af(vu, va, ea_ev=0.8))
+
+def test_hallberg_peck_percent_or_fraction_same_ratio():
+    """RH so aparece como razao: 0.5/0.9 == 50/90."""
+    vu, va = 305.15, 358.15
+    assert hallberg_peck_af(vu, va, 0.5, 0.9, p=3.0, ea_ev=0.8) == pytest.approx(
+        hallberg_peck_af(vu, va, 50.0, 90.0, p=3.0, ea_ev=0.8))
+
+def test_hallberg_peck_humidity_only_accelerates_more():
+    vu, va = 305.15, 358.15
+    assert hallberg_peck_af(vu, va, 0.5, 0.9, p=3.0, ea_ev=0.8) > arrhenius_af(
+        vu, va, ea_ev=0.8)
+
+def test_hallberg_peck_rejects_non_accelerating_humidity():
+    with pytest.raises(ValueError, match="must be HIGHER"):
+        hallberg_peck_af(305.15, 358.15, 0.9, 0.5, p=3.0, ea_ev=0.8)
+
+
+# ---- tabela de tempo equivalente ----
+
+def test_equivalent_time_table_matches_deck_htol_and_coffin_manson():
+    """Reproduz duas linhas do estudo: HTOL (Arrhenius) e termomecanico (CM)."""
+    tab = equivalent_time_table([
+        {"mecanismo": "operacao (HTOL)", "model": "arrhenius", "ea_ev": 0.7,
+         "v_use": celsius_to_kelvin(87), "v_accelerated": celsius_to_kelvin(125),
+         "target_life_use": 12000.0},
+        {"mecanismo": "termomecanico (TC)", "model": "coffin_manson", "m": 4.0,
+         "dt_use": 76.0, "dt_accelerated": 205.0,
+         "target_life_use": 54750.0, "unit": "ciclos"},
+    ])
+    assert tab[0]["af"] == pytest.approx(8.6, rel=1e-2)
+    assert tab[0]["tempo_ensaio_equivalente"] == pytest.approx(1393.0, rel=1e-2)
+    assert tab[1]["af"] == pytest.approx(52.95, rel=1e-3)
+    assert tab[1]["tempo_ensaio_equivalente"] == pytest.approx(1034.0, rel=1e-2)
+    assert tab[1]["unit"] == "ciclos"
+
+def test_equivalent_time_table_rejects_unknown_model():
+    with pytest.raises(KeyError, match="unknown model"):
+        equivalent_time_table([{"model": "weibull", "target_life_use": 1.0}])
