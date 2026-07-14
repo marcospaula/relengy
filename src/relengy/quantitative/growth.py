@@ -193,6 +193,14 @@ def duane(failure_times: Sequence[float]) -> Duane:
     Duane observou que o MTBF **cumulativo** contra o tempo cumulativo cai numa
     reta em log-log. É o mesmo fenômeno do Crow-AMSAA, ajustado por regressão em
     vez de verossimilhança — daí `alpha ≈ 1 − beta`.
+
+    **Descritivo, não inferencial.** A OLS aqui ajusta pontos de MTBF cumulativo
+    que são serialmente correlacionados: cada ponto carrega todos os tempos
+    anteriores, então compartilha dados com o seguinte. Isso viola a
+    independência dos resíduos que a OLS pressupõe. O ajuste serve para a
+    estimativa **pontual** da tendência de crescimento — não para intervalos de
+    confiança nem testes de hipótese. Para inferência, use o `crow_amsaa` ao
+    lado (mesmo fenômeno, por verossimilhança).
     """
     t = np.asarray(failure_times, dtype=float)
     if t.size < 2:

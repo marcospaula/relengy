@@ -76,7 +76,13 @@ class FaultTree:
         não há causa comum, e diverge dele quando há.
 
         `exact=True` usa inclusão-exclusão sobre os minimal cut sets — correto,
-        porém exponencial no número de cut sets.
+        porém **exponencial no número de cut sets**: o laço percorre 2^(nº de
+        cut sets) − 1 termos. O teto prático fica em ~20–25 cut sets (25 já são
+        ~33 milhões de iterações). Acima disso, o padrão escalável da indústria é
+        converter a árvore num BDD (binary decision diagram), que dá a
+        probabilidade exata sem enumerar a união termo a termo; aqui ficamos na
+        inclusão-exclusão de propósito, porque árvores desse porte são pequenas e
+        o código permanece transparente.
         `exact=False` usa a rare-event approximation (soma das probabilidades dos
         cut sets), que SUPERESTIMA o topo e só é aceitável com probabilidades
         pequenas. Ela pode passar de 1.0; nesse caso o resultado é truncado e o
