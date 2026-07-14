@@ -1,29 +1,29 @@
-"""Ajuste Weibull: escolha de método e diagnóstico.
+"""Weibull fitting: method choice and diagnosis.
 
-Duas fontes, que **não dizem exatamente a mesma coisa**. A diferença importa.
+Two sources that **do not say exactly the same thing**. The difference matters.
 
-**Abernethy** (New Weibull Handbook, 5.3.3) é categórico:
+**Abernethy** (New Weibull Handbook, 5.3.3) is categorical:
     "For engineers, the author recommends MRR as best practice [...]
      MLE is not recommended."
 
-**ReliaSoft / ReliaWiki** (Parameter Estimation) qualifica:
+**ReliaSoft / ReliaWiki** (Parameter Estimation) qualifies:
     "our recommendation is to use rank regression techniques when the sample
      sizes are small and without heavy censoring. When heavy or uneven censoring
      is present, when a high proportion of interval data is present and/or when
      the sample size is sufficient, MLE should be preferred."
 
-E acrescenta o motivo pelo qual ambos desconfiam do MLE em amostra pequena:
+And it adds the reason both distrust MLE on a small sample:
     "MLE estimates of the shape parameter for the Weibull distribution are badly
      biased for small sample sizes, and the effect can be increased depending on
      the amount of censoring."
 
-**Síntese adotada aqui:** MRR (RRX) é o padrão, como quer Abernethy — mas ele
-falha justamente onde o ReliaSoft aponta, porque MRR depende de *plotting
-positions* e, sob censura pesada ou desigual, os ranks ajustados carregam pouca
-informação. Nesses casos o MLE ganha. `recommend_method()` decide e explica.
+**The stance taken here:** MRR (RRX) is the default, as Abernethy wants — but it
+fails exactly where ReliaSoft points, because MRR depends on *plotting positions*
+and, under heavy or uneven censoring, the adjusted ranks carry little
+information. In those cases MLE wins. `recommend_method()` decides and explains.
 
-Rodar MRR e MLE juntos continua sendo diagnóstico: beta_MLE muito menor que
-beta_MRR sugere problema de lote (batch problem), não erro numérico.
+Running MRR and MLE together stays diagnostic: a beta_MLE much smaller than
+beta_MRR suggests a batch problem, not a numerical error.
 """
 
 from __future__ import annotations
@@ -32,30 +32,30 @@ from dataclasses import dataclass
 
 from reliability.Fitters import Fit_Weibull_2P
 
-# Limiar da razão beta_mle/beta_mrr abaixo do qual suspeitamos de batch problem.
-# O handbook diz "much less" sem fixar número; 0.75 é escolha NOSSA, conservadora,
-# para sinalizar e não para concluir. Calibre com a sua Weibull Library.
+# Ratio beta_mle/beta_mrr below which we suspect a batch problem. The handbook
+# says "much less" without fixing a number; 0.75 is OUR choice, conservative, to
+# flag rather than to conclude. Calibrate it against your own Weibull Library.
 BATCH_SUSPICION_RATIO = 0.75
 
-# "Amostra pequena" = <= 20 falhas. Este número é do handbook (e dos slides de
-# Fulton & Tarum, que o citam explicitamente).
+# "Small sample" = <= 20 failures. This number is from the handbook (and from
+# Fulton & Tarum's slides, which cite it explicitly).
 SMALL_SAMPLE_FAILURES = 20
 
-# "Censura pesada" — nem Abernethy nem o ReliaWiki fixam um número; ambos dizem
-# "heavy". 0.5 (metade ou mais dos registros são suspensões) é escolha NOSSA.
-# Ajuste se a sua Weibull Library indicar outro ponto de virada.
+# "Heavy censoring" — neither Abernethy nor ReliaWiki fixes a number; both say
+# "heavy". 0.5 (half or more of the records are suspensions) is OUR choice.
+# Adjust it if your Weibull Library points to a different turning point.
 HEAVY_CENSORING_FRACTION = 0.5
 
-# Banda em torno de beta = 1 para o regime de "falhas aleatórias". Um beta de um
-# ajuste real nunca cai exatamente em 1.0, então uma igualdade exata jamais
-# dispararia esse ramo. ±0.05 trata o beta como estatisticamente indistinguível
-# de 1 dentro do ruído típico de um MRR — sinalização, não teste formal.
+# Band around beta = 1 for the "random failures" regime. A beta from a real fit
+# never lands exactly on 1.0, so an exact equality would never trip that branch.
+# ±0.05 treats beta as statistically indistinguishable from 1 within the typical
+# noise of an MRR — a flag, not a formal test.
 RANDOM_FAILURE_BAND = 0.05
 
 
 @dataclass
 class MethodRecommendation:
-    method: str          # 'RRX' ou 'MLE'
+    method: str          # 'RRX' or 'MLE'
     reason: str
     caution: str | None = None
 
@@ -70,15 +70,15 @@ def recommend_method(
     uneven_censoring: bool = False,
     interval_data: bool = False,
 ) -> MethodRecommendation:
-    """Escolhe entre MRR (RRX) e MLE, reconciliando Abernethy e ReliaSoft.
+    """Choose between MRR (RRX) and MLE, reconciling Abernethy and ReliaSoft.
 
-    `uneven_censoring`: as suspensões se concentram (p.ex. todas no fim do teste)
-    em vez de se espalhar entre as falhas. O ReliaWiki trata isso como tão
-    decisivo quanto a censura pesada — e o julgamento é seu, não dá para inferir
-    das contagens.
+    `uneven_censoring`: the suspensions cluster (e.g. all at the end of the test)
+    instead of spreading among the failures. ReliaWiki treats this as just as
+    decisive as heavy censoring — and it is your judgment call, not something to
+    infer from the counts.
 
-    `interval_data`: houve inspeção periódica, você sabe apenas que a falha
-    ocorreu *entre* duas inspeções. MRR não lida bem com isso.
+    `interval_data`: there was periodic inspection; you only know the failure
+    happened *between* two inspections. MRR does not handle this well.
     """
     total = n_failures + n_censored
     frac = n_censored / total if total else 0.0
@@ -146,7 +146,7 @@ class WeibullDiagnosis:
 
     @property
     def small_sample(self) -> bool:
-        """<= 20 falhas é 'amostra pequena' pelo padrão do handbook."""
+        """<= 20 failures is a 'small sample' by the handbook's standard."""
         return self.n_failures <= SMALL_SAMPLE_FAILURES
 
     @property
@@ -166,18 +166,18 @@ class WeibullDiagnosis:
 
     @property
     def batch_margin(self) -> float:
-        """Distância (com sinal) da razão até o corte de suspeita de batch.
+        """Signed distance from the ratio to the batch-suspicion cutoff.
 
-        `BATCH_SUSPICION_RATIO - ratio`: positiva quando `batch_suspected` (a
-        razão está ABAIXO do corte — e quanto maior, mais forte o sinal),
-        negativa quando há folga. Existe para que 0.74 e 0.20 não soem
-        igualmente conclusivos só por dispararem o mesmo booleano: expõe o
-        *quão longe* do limiar, que é o julgamento que o booleano esconde.
+        `BATCH_SUSPICION_RATIO - ratio`: positive when `batch_suspected` (the
+        ratio is BELOW the cutoff — and the larger it is, the stronger the
+        signal), negative when there is headroom. It exists so that 0.74 and
+        0.20 do not sound equally conclusive just for tripping the same boolean:
+        it surfaces *how far* past the threshold — the judgment the boolean hides.
         """
         return BATCH_SUSPICION_RATIO - self.ratio
 
     def regime(self) -> str:
-        """Leitura física de beta (handbook 2.13-2.16), a partir do MRR."""
+        """Physical reading of beta (handbook 2.13-2.16), from the MRR."""
         b = self.beta_mrr
         if b < 1.0 - RANDOM_FAILURE_BAND:
             return "infant mortality (beta < 1)"
@@ -190,7 +190,7 @@ class WeibullDiagnosis:
     def report(self, uneven_censoring: bool = False,
                interval_data: bool = False) -> str:
         rec = self.recommendation(uneven_censoring, interval_data)
-        linhas = [
+        lines = [
             f"n = {self.n_failures} failures, {self.n_censored} suspensions "
             f"({self.censoring_fraction:.0%} censored)",
             f"MRR: beta = {self.beta_mrr:.4f}  eta = {self.eta_mrr:.2f}",
@@ -204,27 +204,27 @@ class WeibullDiagnosis:
             f"RECOMMENDED METHOD -> {rec}",
         ]
         if self.batch_suspected:
-            linhas.append(
+            lines.append(
                 f"ALERT: MLE/MRR beta ratio {self.ratio:.3f} sits {self.batch_margin:.3f} "
                 f"past the {BATCH_SUSPICION_RATIO} line -> suspected batch problem "
                 "(handbook 5.3.3 / 3.9). The wider this gap, the stronger the signal; "
                 "investigate a mixture of lots before trusting the fit."
             )
         if self.small_sample:
-            linhas.append(
+            lines.append(
                 "NOTE: small sample (<= 20 failures). Consider Weibayes, with beta "
                 "taken from your Weibull Library (handbook ch. 6)."
             )
-        return "\n".join(linhas)
+        return "\n".join(lines)
 
 
 def fit_diagnostic(failures, right_censored=None) -> WeibullDiagnosis:
-    """Ajusta Weibull 2P por MRR e por MLE e devolve o par para comparação.
+    """Fit a 2P Weibull by MRR and by MLE and return the pair for comparison.
 
-    Exige ao menos 2 falhas. Com 0 ou 1 falha uma Weibull de 2 parâmetros não se
-    ajusta por regressão (não há reta por menos de dois pontos) e o MLE é pouco
-    confiável — é o caso de Weibayes (beta fixo), não deste diagnóstico. Ver
-    `recommend_method`, que trata n=0 explicitamente.
+    Requires at least 2 failures. With 0 or 1 failure a two-parameter Weibull
+    cannot be fit by regression (no line through fewer than two points) and MLE
+    is unreliable — that is the case for Weibayes (fixed beta), not for this
+    diagnosis. See `recommend_method`, which handles n=0 explicitly.
     """
     failures = list(failures)
     rc = list(right_censored) if right_censored is not None else None
@@ -247,7 +247,7 @@ def fit_diagnostic(failures, right_censored=None) -> WeibullDiagnosis:
 
     return WeibullDiagnosis(
         beta_mrr=mrr.beta,
-        eta_mrr=mrr.alpha,  # `reliability` chama eta de alpha
+        eta_mrr=mrr.alpha,  # the `reliability` package calls eta "alpha"
         beta_mle=mle.beta,
         eta_mle=mle.alpha,
         n_failures=len(common["failures"]),
