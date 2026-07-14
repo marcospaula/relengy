@@ -83,3 +83,53 @@ tracked in **issue #11**.
 ```bash
 python examples/case4_test_bench.py
 ```
+
+## RS401 — Minimum durability for the whole population
+
+`rs401_min_durability.py` · *adapted from a ReliaSoft Brasil RS401 course example;
+the source problem cites the Brazilian standard NBR 6742.*
+
+### The problem
+
+An item is fatigue-tested. Five specimens fail at 10,263 · 12,187 · 16,908 ·
+18,042 · 23,271 cycles. The spec: **minimum durability of 8,000 cycles for the
+entire population**. Approve or reject?
+
+### The trap: sample ≠ population
+
+Every specimen outlasted 8,000 cycles (the smallest is 10,263), so "approve"
+looks obvious. But that reads the *sample*; the spec is about the *population*.
+The fitted Weibull (relengy recommends **RRX** here — small sample, light
+censoring, where Abernethy and ReliaSoft agree) gives:
+
+| β (MRR) | η (MRR) | **F(8,000)** | R(8,000) |
+|--------:|--------:|-------------:|---------:|
+| 3.25 | ~18,000 | **6.9%** | 93.1% |
+
+About **7% of the population is predicted to fail before 8,000 cycles**, even
+though none of the five did.
+
+### Cross-check against the course's Weibull-paper solution
+
+- **Median ranks match exactly.** relengy's `bernard_median_rank`, `(j−0.3)/(n+0.4)`,
+  reproduces the course table to the decimal (12.96 · 31.48 · 50.00 · 68.51 · 87.03).
+- **The graphical read-offs are internally inconsistent.** The course read β=3.0,
+  η=16,000 and F(8,000)=6% off one hand-drawn line — but β=3.0 & η=16,000 recompute
+  to F=**11.8%**, not 6%. relengy's single self-consistent (β, η) lands on the ~6–7%
+  the plot pointed to. The graphical method gets the decision and the ballpark; the
+  numerical fit gives parameters that actually agree with each other.
+
+### Answer: **reject**
+
+F(8,000) = 6.9% ≠ 0, so the population does not meet an "8,000 cycles minimum for
+all" spec. Caveats worth stating: a purely literal `F = 0` always rejects (a 2P
+Weibull's lower tail is never zero), so the real decision is **risk-based**
+(frequency ~7% × severity); and if fatigue here has a **minimum life** (a 3P
+Weibull with threshold γ > 8,000), F(8,000) = 0 and you would approve — five
+points can't settle that, but it is the key physical question.
+
+### Run it
+
+```bash
+python examples/rs401_min_durability.py
+```
