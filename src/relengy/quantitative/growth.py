@@ -1,32 +1,33 @@
-"""Crescimento de confiabilidade: Crow-AMSAA (NHPP) e Duane.
+"""Reliability growth: Crow-AMSAA (NHPP) and Duane.
 
-Para **sistemas reparáveis** em desenvolvimento. Não confunda com análise de dados
-de vida: aqui os tempos são *acumulados* de um único sistema (ou frota) que vai
-sendo corrigido, não idades de itens independentes até falhar.
+For **repairable systems** under development. Do not confuse this with life data
+analysis: here the times are *cumulative* on a single system (or fleet) being
+corrected as it runs, not the ages of independent items until they fail.
 
-⚠ **O β do Crow-AMSAA NÃO é o β da Weibull.** Mesmo símbolo, significado oposto:
+⚠ **The Crow-AMSAA β is NOT the Weibull β.** Same symbol, opposite meaning:
 
 | β | Weibull (LDA) | Crow-AMSAA (NHPP) |
 |---|---|---|
-| β < 1 | mortalidade infantil (ruim) | **confiabilidade crescendo** (bom) |
-| β = 1 | falhas aleatórias | Poisson homogêneo: sem crescimento |
-| β > 1 | desgaste | **confiabilidade piorando** |
+| β < 1 | infant mortality (bad) | **reliability growing** (good) |
+| β = 1 | random failures | homogeneous Poisson: no growth |
+| β > 1 | wear-out | **reliability worsening** |
 
-A intensidade de falha é ρ(T) = λ·β·T^(β−1). Com β < 1 ela decresce — o sistema
-está melhorando. É a confusão mais comum ao ler os dois capítulos em sequência.
+The failure intensity is ρ(T) = λ·β·T^(β−1). With β < 1 it decreases — the system
+is improving. This is the most common confusion when reading the two chapters
+back to back.
 
-Estimadores (ReliaWiki, *Crow-AMSAA (NHPP)*, seções de MLE e "Biasing and
-Unbiasing of Beta"), verificados contra o exemplo resolvido do próprio wiki:
+Estimators (ReliaWiki, *Crow-AMSAA (NHPP)*, the MLE and "Biasing and Unbiasing of
+Beta" sections), checked against the wiki's own worked example:
 
-    β̂ = n / (n·ln T* − Σ ln Tᵢ)          mesma fórmula nos dois tipos de teste
+    β̂ = n / (n·ln T* − Σ ln Tᵢ)          same formula for both test types
     λ̂ = n / T*^β
 
-onde T* = Tₙ se o teste termina na falha, T* = tempo final se termina no tempo.
+where T* = Tₙ if the test ends on a failure, T* = the final time if it ends on time.
 
-Desviesamento (aí sim difere):
+Unbiasing (this is where they differ):
 
-    teste terminado por TEMPO:  β̄ = (N−1)/N · β̂
-    teste terminado por FALHA:  β̄ = (N−2)/(N−1) · β̂
+    TIME-terminated test:     β̄ = (N−1)/N · β̂
+    FAILURE-terminated test:  β̄ = (N−2)/(N−1) · β̂
 """
 
 from __future__ import annotations
@@ -49,15 +50,15 @@ class CrowAMSAA:
     termination: Termination
     unbiased: bool
 
-    # -- intensidade de falha ---------------------------------------------
+    # -- failure intensity -------------------------------------------------
 
     def instantaneous_intensity(self, t: float | None = None) -> float:
-        """ρ(T) = λ·β·T^(β−1). A taxa de falha *agora*."""
+        """ρ(T) = λ·β·T^(β−1). The failure rate *right now*."""
         t = self.t_end if t is None else t
         return self.lam * self.beta * t ** (self.beta - 1.0)
 
     def cumulative_intensity(self, t: float | None = None) -> float:
-        """λ_c(T) = λ·T^(β−1). A média histórica, não a taxa atual."""
+        """λ_c(T) = λ·T^(β−1). The historical average, not the current rate."""
         t = self.t_end if t is None else t
         return self.lam * t ** (self.beta - 1.0)
 
@@ -69,15 +70,15 @@ class CrowAMSAA:
     # -- MTBF --------------------------------------------------------------
 
     def instantaneous_mtbf(self, t: float | None = None) -> float:
-        """O MTBF que o sistema tem AGORA. É este que se reporta ao cliente."""
+        """The MTBF the system has RIGHT NOW. This is the one you report to the customer."""
         return 1.0 / self.instantaneous_intensity(t)
 
     def cumulative_mtbf(self, t: float | None = None) -> float:
-        """MTBF médio desde o início do teste. Sempre otimista? Não: com
-        crescimento (β<1) ele é PESSIMISTA — carrega as falhas antigas."""
+        """Average MTBF since the start of the test. Always optimistic? No: under
+        growth (β<1) it is PESSIMISTIC — it carries the old failures."""
         return 1.0 / self.cumulative_intensity(t)
 
-    # -- leitura -----------------------------------------------------------
+    # -- reading -----------------------------------------------------------
 
     def verdict(self) -> str:
         if self.beta < 1.0:
@@ -87,17 +88,17 @@ class CrowAMSAA:
         return f"reliability DETERIORATING (beta={self.beta:.4f} > 1)"
 
     def time_to_reach_mtbf(self, target_mtbf: float) -> float:
-        """Quanto tempo de teste até o MTBF instantâneo atingir o alvo.
+        """How much test time until the instantaneous MTBF reaches the target.
 
-        Só faz sentido com β < 1 (crescendo). Assume que a taxa de crescimento
-        atual se mantém — extrapolação, e o handbook avisa que ela costuma saturar.
+        Only meaningful with β < 1 (growing). Assumes the current growth rate
+        holds — an extrapolation, and the handbook warns it tends to saturate.
         """
         if self.beta >= 1.0:
             raise ValueError(
                 f"beta = {self.beta:.4f} >= 1: the system is not improving, "
                 "the instantaneous MTBF never reaches the target"
             )
-        # 1/(λβT^(β−1)) = alvo  =>  T^(1−β) = alvo·λ·β
+        # 1/(λβT^(β−1)) = target  =>  T^(1−β) = target·λ·β
         return (target_mtbf * self.lam * self.beta) ** (1.0 / (1.0 - self.beta))
 
     def report(self) -> str:
@@ -117,10 +118,10 @@ def crow_amsaa(
     termination: Termination = "failure",
     unbiased: bool = False,
 ) -> CrowAMSAA:
-    """Ajusta o modelo Crow-AMSAA por máxima verossimilhança.
+    """Fit the Crow-AMSAA model by maximum likelihood.
 
-    `failure_times` são tempos **acumulados** de teste, crescentes.
-    `t_end` só é necessário se `termination='time'` (e deve ser > último tempo).
+    `failure_times` are **cumulative** test times, increasing.
+    `t_end` is only needed if `termination='time'` (and must be > the last time).
     """
     t = np.asarray(failure_times, dtype=float)
     n = t.size
@@ -155,7 +156,7 @@ def crow_amsaa(
     if unbiased:
         # ReliaWiki, "Biasing and Unbiasing of Beta"
         if termination == "failure" and n < 3:
-            # o fator (N-2)/(N-1) zera em N=2, devolvendo beta=0 silenciosamente
+            # the (N-2)/(N-1) factor is zero at N=2, silently returning beta=0
             raise ValueError(
                 "unbiased beta for a failure-terminated test needs at least 3 "
                 "failures (the (N-2)/(N-1) correction collapses to 0 at N=2)"
@@ -172,8 +173,8 @@ def crow_amsaa(
 
 @dataclass
 class Duane:
-    alpha: float   # taxa de crescimento (inclinação no log-log)
-    b: float       # intercepto
+    alpha: float   # growth rate (slope on log-log)
+    b: float       # intercept
     n_failures: int
 
     def cumulative_mtbf(self, t: float) -> float:
@@ -181,26 +182,25 @@ class Duane:
         return self.b * t**self.alpha
 
     def instantaneous_mtbf(self, t: float) -> float:
-        """m_i = m_c / (1 − α). Diverge quando α → 1."""
+        """m_i = m_c / (1 − α). Diverges as α → 1."""
         if self.alpha >= 1.0:
             raise ValueError(f"alpha = {self.alpha:.4f} >= 1: instantaneous MTBF is undefined")
         return self.cumulative_mtbf(t) / (1.0 - self.alpha)
 
 
 def duane(failure_times: Sequence[float]) -> Duane:
-    """Duane por regressão nos mínimos quadrados em papel log-log.
+    """Duane by least-squares regression on log-log paper.
 
-    Duane observou que o MTBF **cumulativo** contra o tempo cumulativo cai numa
-    reta em log-log. É o mesmo fenômeno do Crow-AMSAA, ajustado por regressão em
-    vez de verossimilhança — daí `alpha ≈ 1 − beta`.
+    Duane observed that the **cumulative** MTBF against cumulative time falls on a
+    straight line in log-log. It is the same phenomenon as Crow-AMSAA, fit by
+    regression instead of likelihood — hence `alpha ≈ 1 − beta`.
 
-    **Descritivo, não inferencial.** A OLS aqui ajusta pontos de MTBF cumulativo
-    que são serialmente correlacionados: cada ponto carrega todos os tempos
-    anteriores, então compartilha dados com o seguinte. Isso viola a
-    independência dos resíduos que a OLS pressupõe. O ajuste serve para a
-    estimativa **pontual** da tendência de crescimento — não para intervalos de
-    confiança nem testes de hipótese. Para inferência, use o `crow_amsaa` ao
-    lado (mesmo fenômeno, por verossimilhança).
+    **Descriptive, not inferential.** The OLS here fits cumulative-MTBF points
+    that are serially correlated: each point carries all the earlier times, so it
+    shares data with the next one. That violates the residual independence OLS
+    assumes. The fit gives a **point** estimate of the growth trend — not
+    confidence intervals or hypothesis tests. For inference, use `crow_amsaa`
+    alongside (same phenomenon, by likelihood).
     """
     t = np.asarray(failure_times, dtype=float)
     if t.size < 2:
@@ -209,6 +209,6 @@ def duane(failure_times: Sequence[float]) -> Duane:
         raise ValueError("cumulative times must be strictly increasing")
 
     n = np.arange(1, t.size + 1)
-    mtbf_c = t / n                       # MTBF cumulativo observado
+    mtbf_c = t / n                       # observed cumulative MTBF
     slope, intercept = np.polyfit(np.log(t), np.log(mtbf_c), 1)
     return Duane(alpha=float(slope), b=float(math.exp(intercept)), n_failures=t.size)
