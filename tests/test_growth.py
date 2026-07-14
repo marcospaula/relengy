@@ -65,6 +65,15 @@ def test_unbiased_beta_is_smaller():
     assert crow_amsaa(WIKI, unbiased=True).beta < crow_amsaa(WIKI).beta
 
 
+def test_unbiased_failure_terminated_needs_three_failures():
+    """N=2 zera o fator (N-2)/(N-1) -> beta=0 silencioso; o guard rejeita."""
+    with pytest.raises(ValueError, match="at least 3"):
+        crow_amsaa([10, 20], unbiased=True)
+    assert crow_amsaa([10, 20, 30], unbiased=True).beta > 0          # N=3 ja passa
+    # time-terminated com N=2 continua valido (fator (N-1)/N = 1/2, nao zera)
+    assert crow_amsaa([10, 20], t_end=30, termination="time", unbiased=True).beta > 0
+
+
 # ---- time terminated ----
 
 def test_time_terminated_needs_t_end():

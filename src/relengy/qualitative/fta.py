@@ -11,6 +11,7 @@ justificar dependência pesada, e a álgebra booleana aqui é direta.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from itertools import product
 from typing import Literal
@@ -115,6 +116,4 @@ class FaultTree:
 
 def weibull_cdf(t: float, beta: float, eta: float) -> float:
     """F(t) para alimentar basic events a partir da Weibull Library."""
-    import math
-
     return 1.0 - math.exp(-((t / eta) ** beta))

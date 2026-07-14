@@ -46,6 +46,12 @@ SMALL_SAMPLE_FAILURES = 20
 # Ajuste se a sua Weibull Library indicar outro ponto de virada.
 HEAVY_CENSORING_FRACTION = 0.5
 
+# Banda em torno de beta = 1 para o regime de "falhas aleatórias". Um beta de um
+# ajuste real nunca cai exatamente em 1.0, então uma igualdade exata jamais
+# dispararia esse ramo. ±0.05 trata o beta como estatisticamente indistinguível
+# de 1 dentro do ruído típico de um MRR — sinalização, não teste formal.
+RANDOM_FAILURE_BAND = 0.05
+
 
 @dataclass
 class MethodRecommendation:
@@ -161,10 +167,10 @@ class WeibullDiagnosis:
     def regime(self) -> str:
         """Leitura física de beta (handbook 2.13-2.16), a partir do MRR."""
         b = self.beta_mrr
-        if b < 1.0:
+        if b < 1.0 - RANDOM_FAILURE_BAND:
             return "infant mortality (beta < 1)"
-        if b == 1.0:
-            return "random failures (beta = 1)"
+        if b <= 1.0 + RANDOM_FAILURE_BAND:
+            return "random failures (beta ~ 1)"
         if b < 4.0:
             return "early wear-out (1 < beta < 4)"
         return "rapid old-age wear-out (beta > 4)"

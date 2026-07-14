@@ -154,6 +154,12 @@ def crow_amsaa(
 
     if unbiased:
         # ReliaWiki, "Biasing and Unbiasing of Beta"
+        if termination == "failure" and n < 3:
+            # o fator (N-2)/(N-1) zera em N=2, devolvendo beta=0 silenciosamente
+            raise ValueError(
+                "unbiased beta for a failure-terminated test needs at least 3 "
+                "failures (the (N-2)/(N-1) correction collapses to 0 at N=2)"
+            )
         beta *= (n - 1) / n if termination == "time" else (n - 2) / (n - 1)
 
     lam = n / t_star**beta

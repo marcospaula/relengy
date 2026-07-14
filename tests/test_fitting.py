@@ -3,8 +3,15 @@
 import pytest
 
 from relengy.quantitative.fitting import (
-    HEAVY_CENSORING_FRACTION, SMALL_SAMPLE_FAILURES, fit_diagnostic, recommend_method,
+    HEAVY_CENSORING_FRACTION, RANDOM_FAILURE_BAND, SMALL_SAMPLE_FAILURES,
+    WeibullDiagnosis, fit_diagnostic, recommend_method,
 )
+
+
+def _diag(beta_mrr: float) -> WeibullDiagnosis:
+    """Diagnostico minimo so para exercitar regime() com um beta controlado."""
+    return WeibullDiagnosis(beta_mrr=beta_mrr, eta_mrr=100.0, beta_mle=beta_mrr,
+                            eta_mle=100.0, n_failures=10, n_censored=0)
 
 def test_small_sample_light_censoring_uses_rrx():
     """O caso em que as duas fontes concordam: MRR."""
@@ -69,3 +76,14 @@ def test_fit_diagnostic_needs_two_failures_and_points_to_weibayes(failures):
         fit_diagnostic(failures, right_censored=[100, 100])
     with pytest.raises(ValueError, match="Weibayes"):
         fit_diagnostic(failures)
+
+
+def test_regime_uses_a_band_around_one_not_exact_equality():
+    """beta de um ajuste real nunca cai em 1.0 exato: o ramo 'random' e uma banda."""
+    assert RANDOM_FAILURE_BAND == 0.05
+    assert "infant mortality" in _diag(0.90).regime()      # abaixo da banda
+    assert "random failures" in _diag(0.95).regime()       # borda inferior
+    assert "random failures" in _diag(1.00).regime()
+    assert "random failures" in _diag(1.05).regime()       # borda superior (inclusiva)
+    assert "early wear-out" in _diag(1.10).regime()        # acima da banda
+    assert "rapid old-age" in _diag(5.0).regime()
