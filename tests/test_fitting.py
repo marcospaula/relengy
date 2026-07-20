@@ -2,9 +2,11 @@
 (MLE sob censura pesada/desigual ou dados intervalares)."""
 import pytest
 
+from math import log
+
 from relengy.quantitative.fitting import (
     HEAVY_CENSORING_FRACTION, RANDOM_FAILURE_BAND, SMALL_SAMPLE_FAILURES,
-    WeibullDiagnosis, fit_diagnostic, recommend_method,
+    WeibullDiagnosis, fit_diagnostic, r_for_confidence, recommend_method, weibayes,
 )
 
 
@@ -123,3 +125,39 @@ def test_report_shows_how_far_past_the_batch_line_not_just_the_flag():
 
     # sem suspeita, a linha da razao ainda diz o lado (folga acima do corte)
     assert "above the 0.75 batch line" in _diag_ratio(0.90).report()
+
+
+def test_weibayes_matches_handbook_eq_6_1():
+    """6 unid. a 150 min, zero falhas, beta=2.024 -> eta ~ 363.6 (Eq. 6-1, r=1)."""
+    assert weibayes([150.0] * 6, beta=2.024, r=1.0) == pytest.approx(363.6, abs=0.1)
+
+
+def test_r_for_confidence_levels():
+    """r = -ln(1-C): 63.2% -> 1, 90% -> 2.303 (ch. 6.3)."""
+    assert r_for_confidence(0.632) == pytest.approx(1.0, abs=1e-3)
+    assert r_for_confidence(0.90) == pytest.approx(2.302585, abs=1e-6)
+
+
+def test_weibayes_is_the_fixed_beta_mle():
+    """A forma fechada e o MLE de eta com beta fixo: log-verossimilhanca maxima."""
+    beta = 2.5
+    failures = [120.0, 200.0]
+    times = failures + [150.0, 150.0, 300.0]           # + suspensoes
+    eta = weibayes(times, beta=beta, r=len(failures))
+
+    def loglik(e: float) -> float:
+        return (len(failures) * (log(beta) - beta * log(e))
+                + (beta - 1) * sum(log(t) for t in failures)
+                - sum((t / e) ** beta for t in times))
+
+    assert loglik(eta) > loglik(eta * 1.02)            # eta e o argmax
+    assert loglik(eta) > loglik(eta * 0.98)
+
+
+def test_weibayes_rejects_bad_inputs():
+    with pytest.raises(ValueError):
+        weibayes([100.0, 200.0], beta=2.0, r=0.0)      # r deve ser > 0
+    with pytest.raises(ValueError):
+        weibayes([], beta=2.0)                          # times vazio
+    with pytest.raises(ValueError):
+        r_for_confidence(1.0)                           # C fora de (0,1)

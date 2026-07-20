@@ -29,6 +29,7 @@ beta_MRR suggests a batch problem, not a numerical error.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import log
 
 from reliability.Fitters import Fit_Weibull_2P
 
@@ -253,3 +254,44 @@ def fit_diagnostic(failures, right_censored=None) -> WeibullDiagnosis:
         n_failures=len(common["failures"]),
         n_censored=len(rc) if rc else 0,
     )
+
+
+def r_for_confidence(confidence: float) -> float:
+    """Assumed failures for a zero-failure Weibayes bound at `confidence` (ch. 6.3).
+
+    r = -ln(1 - C): the first failure is assumed imminent, so C=0.632 gives r=1
+    (the classic lower bound) and C=0.90 gives r=2.303. A larger r is more
+    conservative — it pushes eta down.
+    """
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must be in (0, 1); got {confidence}")
+    return -log(1.0 - confidence)
+
+
+def weibayes(times, beta: float, r: float = 1.0) -> float:
+    """Weibayes: one-parameter Weibull with `beta` assumed (handbook Eq. 6-1).
+
+        eta = [ sum(t_i ** beta) / r ] ** (1 / beta)
+
+    `times` are ALL units on test — failures AND suspensions; every one enters the
+    sum. `beta` must come from prior knowledge of the SAME failure mode (your
+    Weibull Library); if the mechanism changed, the assumption — and the answer —
+    do not hold (handbook 6.6).
+
+    Two regimes (handbook 6.3-6.4):
+      - with failures: pass ``r = number of failures``. eta is then the MLE of eta
+        given beta, and (being invariant under transformation) so are its B-lives.
+      - zero failures: ``r=1`` gives the lower bound on eta at 63.2% confidence,
+        the first failure assumed imminent. For another level pass
+        ``r=r_for_confidence(C)``.
+
+    Returns eta, in the same units as `times`.
+    """
+    t = [float(x) for x in times]
+    if not t:
+        raise ValueError("times is empty")
+    if beta <= 0.0:
+        raise ValueError(f"beta must be > 0; got {beta}")
+    if r <= 0.0:
+        raise ValueError(f"r must be > 0 (zero-failure tests use r=1; see 6.3); got {r}")
+    return (sum(x ** beta for x in t) / r) ** (1.0 / beta)
